@@ -1,4 +1,5 @@
 .env
+.env.local
 .venv/
 .pytest_cache/
 .mypy_cache/
