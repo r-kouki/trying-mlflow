@@ -1,0 +1,69 @@
+services:
+  # ── Serveur MLflow ────────────────────────────────────────────
+  # Démarre seul avec : docker compose up -d mlflow-server
+  # UI accessible sur  : http://localhost:5000
+  mlflow-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+    container_name: mlflow-server
+    ports:
+      - "5000:5000"
+    environment:
+      - MLFLOW_S3_ENDPOINT_URL=${OVH_ENDPOINT}
+      - AWS_ACCESS_KEY_ID=${OVH_ACCESS_KEY}
+      - AWS_SECRET_ACCESS_KEY=${OVH_SECRET_KEY}
+      - AWS_DEFAULT_REGION=gra
+    volumes:
+      - mlflow_data:/mlflow
+    networks:
+      - mlops-net
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri sqlite:///mlflow/mlflow.db
+      --default-artifact-root /mlflow/artifacts
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── Entraînement YOLOv8 ──────────────────────────────────────
+  # Lancé à la demande : docker compose run --rm yolo-trainer
+  yolo-trainer:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.trainer
+    container_name: yolo-trainer
+    profiles:
+      - train
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow-server:5000
+      - MLFLOW_S3_ENDPOINT_URL=${OVH_ENDPOINT}
+      - AWS_ACCESS_KEY_ID=${OVH_ACCESS_KEY}
+      - AWS_SECRET_ACCESS_KEY=${OVH_SECRET_KEY}
+      - AWS_DEFAULT_REGION=gra
+      - BUCKET_NAME=${BUCKET_NAME}
+      - DATA_PREFIX=${DATA_PREFIX:-data/}
+      - OVH_ENDPOINT=${OVH_ENDPOINT}
+    volumes:
+      - ../src:/app/src
+      - ../configs:/app/configs
+      - ../data_local:/app/data_local
+    networks:
+      - mlops-net
+    depends_on:
+      mlflow-server:
+        condition: service_healthy
+    command: python /app/src/train.py
+
+volumes:
+  mlflow_data:
+    name: mlflow_data
+
+networks:
+  mlops-net:
+    name: mlops-net

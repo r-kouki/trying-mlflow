@@ -1,0 +1,17 @@
+# ── Image MLflow Server ─────────────────────────────────────────
+# Backend : SQLite (suffisant pour un POC)
+# Artifacts : OVH S3 via boto3
+FROM python:3.11-slim
+
+RUN pip install --no-cache-dir mlflow==2.16.2 boto3
+
+# Forcer SigV4 + path-style pour OVH S3
+RUN mkdir -p /root/.aws && printf '[default]\ns3 =\n    signature_version = s3v4\n    addressing_style = path\n' > /root/.aws/config
+
+# Répertoire pour la base SQLite (monté en volume)
+RUN mkdir -p /mlflow
+
+EXPOSE 5000
+
+# Le CMD est surchargé dans docker-compose.yml
+CMD ["mlflow", "server", "--host", "0.0.0.0", "--port", "5000"]
