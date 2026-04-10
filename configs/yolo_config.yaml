@@ -1,0 +1,11 @@
+# ── Hyperparamètres YOLOv8 par défaut ───────────────────────────
+# Ces valeurs sont surchargées par les variables d'env YOLO_*
+# ou par le dict overrides dans train.py
+
+model: yolov8n.pt        # Variante : yolov8n/s/m/l/x
+epochs: 10
+batch: 16
+imgsz: 640
+lr0: 0.01
+optimizer: SGD            # SGD, Adam, AdamW
+dataset_version: "v1.0"
