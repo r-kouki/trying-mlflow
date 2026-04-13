@@ -19,3 +19,7 @@ data_local/labels/*.cache
 # Local MLflow state
 mlruns/
 mlflow.db
+
+# ZenML local store
+.zen/
+zenml.db

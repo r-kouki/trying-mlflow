@@ -60,9 +60,41 @@ services:
         condition: service_healthy
     command: python /app/src/train.py
 
+  # ── ZenML Pipeline (replaces yolo-trainer for zenml-integration branch) ──
+  # Run with: docker compose --profile train run --rm zenml-pipeline
+  zenml-pipeline:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.pipeline
+    container_name: zenml-pipeline
+    profiles:
+      - train
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow-server:5000
+      - OVH_ENDPOINT=${OVH_ENDPOINT}
+      - OVH_ACCESS_KEY=${OVH_ACCESS_KEY}
+      - OVH_SECRET_KEY=${OVH_SECRET_KEY}
+      - AWS_ACCESS_KEY_ID=${OVH_ACCESS_KEY}
+      - AWS_SECRET_ACCESS_KEY=${OVH_SECRET_KEY}
+      - AWS_DEFAULT_REGION=gra
+      - BUCKET_NAME=${BUCKET_NAME}
+      - DATA_PREFIX=${DATA_PREFIX:-data/}
+    volumes:
+      - ../src:/app/src
+      - ../configs:/app/configs
+      - ../data_local:/app/data_local
+      - zenml_store:/root/.config/zenml
+    networks:
+      - mlops-net
+    depends_on:
+      mlflow-server:
+        condition: service_healthy
+
 volumes:
   mlflow_data:
     name: mlflow_data
+  zenml_store:
+    name: zenml_store
 
 networks:
   mlops-net:
