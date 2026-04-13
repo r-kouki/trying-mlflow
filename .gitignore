@@ -13,6 +13,7 @@ __pycache__/
 
 # Generated training outputs
 data_local/runs/
+runs/
 data_local/labels/*.cache
 
 # Local MLflow state

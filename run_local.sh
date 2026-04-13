@@ -11,7 +11,7 @@ set -e
 
 PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
 VENV_DIR="$PROJECT_ROOT/.venv"
-MLFLOW_PORT=5000
+MLFLOW_PORT=5001
 MLFLOW_STORE="$PROJECT_ROOT/mlruns"
 
 # ── 1. Create or reuse venv ───────────────────────────────────
