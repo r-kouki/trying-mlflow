@@ -1,0 +1,12 @@
+FROM python:3.11-slim
+
+RUN pip install --no-cache-dir --timeout 300 mlflow>=3.0.0 boto3
+
+# OVH S3: SigV4 + path-style
+RUN mkdir -p /root/.aws && printf '[default]\ns3 =\n    signature_version = s3v4\n    addressing_style = path\n' > /root/.aws/config
+
+RUN mkdir -p /mlflow
+
+EXPOSE 5002
+
+CMD ["mlflow", "server", "--host", "0.0.0.0", "--port", "5002"]

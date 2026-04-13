@@ -8,9 +8,6 @@ import mlflow
 from ultralytics import YOLO
 from ultralytics.utils import SETTINGS
 from zenml import pipeline, step
-from zenml.integrations.mlflow.flavors.mlflow_experiment_tracker_flavor import (
-    MLFlowExperimentTrackerSettings,
-)
 
 from config import (
     AWS_ACCESS_KEY_ID,
@@ -36,12 +33,7 @@ def load_data() -> Path:
     return download_dataset()
 
 
-@step(
-    experiment_tracker="mlflow_tracker",
-    settings={"experiment_tracker": MLFlowExperimentTrackerSettings(
-        experiment_name=MLFLOW_EXPERIMENT_NAME,
-    )},
-)
+@step
 def train_model(data_dir: Path) -> dict:
     SETTINGS.update({"mlflow": False})
 
@@ -117,20 +109,34 @@ def train_model(data_dir: Path) -> dict:
                     if epoch_metrics:
                         mlflow.log_metrics(epoch_metrics, step=epoch)
 
-        # Artifacts
+        # Artifacts — plots logged as generic artifacts
         train_dir = RUNS_DIR / "detect"
         for artifact, folder in [
             (train_dir / "confusion_matrix.png", "plots"),
             (train_dir / "results.png",          "plots"),
-            (train_dir / "weights" / "best.pt",  "model"),
         ]:
             if artifact.exists():
                 mlflow.log_artifact(str(artifact), folder)
 
-        # MLflow Model Registry — register best.pt as a versioned model
+        # MLflow Model Registry — log best.pt as a proper MLflow model (MLmodel manifest)
+        # mlflow.register_model() in MLflow 3.x requires a logged model, not a raw artifact.
+        best_pt = train_dir / "weights" / "best.pt"
         run_id = mlflow.active_run().info.run_id
-        registered = mlflow.register_model(f"runs:/{run_id}/model", "yolo-detector")
-        print(f"[train_model] Registered: yolo-detector v{registered.version}")
+        if best_pt.exists():
+            class _YOLOWrapper(mlflow.pyfunc.PythonModel):
+                def predict(self, context, model_input, params=None):
+                    from ultralytics import YOLO as _YOLO
+                    m = _YOLO(context.artifacts["weights"])
+                    return m(model_input)
+
+            mlflow.pyfunc.log_model(
+                artifact_path="model",
+                python_model=_YOLOWrapper(),
+                artifacts={"weights": str(best_pt)},
+                pip_requirements=["ultralytics"],
+            )
+            registered = mlflow.register_model(f"runs:/{run_id}/model", "yolo-detector")
+            print(f"[train_model] Registered: yolo-detector v{registered.version}")
 
     return final_metrics
 

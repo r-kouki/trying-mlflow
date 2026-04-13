@@ -3,7 +3,7 @@
 # Artifacts : OVH S3 via boto3
 FROM python:3.11-slim
 
-RUN pip install --no-cache-dir mlflow>=3.0.0 boto3
+RUN pip install --no-cache-dir mlflow==2.16.2 boto3
 
 # Forcer SigV4 + path-style pour OVH S3
 RUN mkdir -p /root/.aws && printf '[default]\ns3 =\n    signature_version = s3v4\n    addressing_style = path\n' > /root/.aws/config
