@@ -1,0 +1,65 @@
+services:
+  # MLflow 3.x server for ZenML pipeline — port 5002 (old stack uses 5000)
+  # Uses host networking so the pipeline can reach it via localhost:5002
+  # (MLflow 3.x rejects requests with Docker-internal hostnames in the Host header)
+  # Start with: docker compose up -d mlflow-server
+  # UI: http://localhost:5002
+  mlflow-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+    container_name: mlflow-server-zenml
+    network_mode: host
+    environment:
+      - MLFLOW_S3_ENDPOINT_URL=${OVH_ENDPOINT}
+      - AWS_ACCESS_KEY_ID=${OVH_ACCESS_KEY}
+      - AWS_SECRET_ACCESS_KEY=${OVH_SECRET_KEY}
+      - AWS_DEFAULT_REGION=gra
+    volumes:
+      - mlflow_zenml_data:/mlflow
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5002
+      --backend-store-uri sqlite:///mlflow/mlflow.db
+      --default-artifact-root /mlflow/artifacts
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5002/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ZenML pipeline — run with: docker compose --profile train run --rm zenml-pipeline
+  zenml-pipeline:
+    build:
+      context: ..
+      dockerfile: docker-zenml/Dockerfile.pipeline
+    container_name: zenml-pipeline
+    profiles:
+      - train
+    network_mode: host
+    environment:
+      - MLFLOW_TRACKING_URI=http://localhost:5002
+      - OVH_ENDPOINT=${OVH_ENDPOINT}
+      - OVH_ACCESS_KEY=${OVH_ACCESS_KEY}
+      - OVH_SECRET_KEY=${OVH_SECRET_KEY}
+      - AWS_ACCESS_KEY_ID=${OVH_ACCESS_KEY}
+      - AWS_SECRET_ACCESS_KEY=${OVH_SECRET_KEY}
+      - AWS_DEFAULT_REGION=gra
+      - BUCKET_NAME=${BUCKET_NAME}
+      - DATA_PREFIX=${DATA_PREFIX:-data/}
+    volumes:
+      - ../src:/app/src
+      - ../configs:/app/configs
+      - ../data_local:/app/data_local
+      - zenml_store:/root/.config/zenml
+    depends_on:
+      mlflow-server:
+        condition: service_healthy
+
+volumes:
+  mlflow_zenml_data:
+    name: mlflow_zenml_data
+  zenml_store:
+    name: zenml_store
