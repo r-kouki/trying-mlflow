@@ -6,7 +6,7 @@ RUN pip install --no-cache-dir --timeout 300 \
     mlflow>=3.0.0 \
     boto3>=1.34.0 \
     pyyaml>=6.0 \
-    "zenml[server]>=0.70.0" \
+    "zenml[server]==0.94.2" \
     s3fs>=2022.11.0
 
 RUN zenml integration install mlflow s3 -y

@@ -1,4 +1,23 @@
 services:
+  # ZenML server — dashboard UI at http://localhost:8080
+  # Start with: docker compose up -d zenml-server
+  zenml-server:
+    image: zenmldocker/zenml-server:latest
+    container_name: zenml-server
+    network_mode: host
+    environment:
+      - ZENML_DEFAULT_USER_NAME=admin
+      - ZENML_DEFAULT_USER_PASSWORD=admin
+      - ZENML_STORE_URL=sqlite:////zenml/zenml.db
+    volumes:
+      - zenml_server_data:/zenml
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
   # MLflow 3.x server for ZenML pipeline — port 5002 (old stack uses 5000)
   # Uses host networking so the pipeline can reach it via localhost:5002
   # (MLflow 3.x rejects requests with Docker-internal hostnames in the Host header)
@@ -57,9 +76,13 @@ services:
     depends_on:
       mlflow-server:
         condition: service_healthy
+      zenml-server:
+        condition: service_healthy
 
 volumes:
   mlflow_zenml_data:
     name: mlflow_zenml_data
   zenml_store:
     name: zenml_store
+  zenml_server_data:
+    name: zenml_server_data
