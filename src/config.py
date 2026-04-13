@@ -13,6 +13,7 @@ import yaml
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CONFIGS_DIR = PROJECT_ROOT / "configs"
 LOCAL_DATA_DIR = PROJECT_ROOT / "data_local"  # données téléchargées depuis S3
+RUNS_DIR = PROJECT_ROOT / "runs"              # résultats YOLO (hors data_local pour éviter les soucis de permissions)
 
 # ── OVH S3 ──────────────────────────────────────────────────────
 OVH_ENDPOINT = os.getenv("OVH_ENDPOINT", "https://s3.gra.io.cloud.ovh.net")

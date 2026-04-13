@@ -83,6 +83,7 @@ def prepare_dataset_yaml(data_dir: Path, dataset_config: dict) -> Path:
     Returns:
         Chemin du dataset.yaml généré.
     """
+    import tempfile
     import yaml
 
     # Construire le YAML avec chemins absolus
@@ -93,7 +94,8 @@ def prepare_dataset_yaml(data_dir: Path, dataset_config: dict) -> Path:
         "names": dataset_config.get("names", {0: "object"}),
     }
 
-    output_path = data_dir / "dataset.yaml"
+    # Write to temp dir to avoid permission issues when data_local/ is owned by root (Docker)
+    output_path = Path(tempfile.gettempdir()) / "yolo_dataset.yaml"
     with open(output_path, "w") as f:
         yaml.dump(runtime_config, f, default_flow_style=False)
 
